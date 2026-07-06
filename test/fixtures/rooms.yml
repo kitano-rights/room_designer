@@ -1,9 +1,7 @@
-# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
-
 one:
-  name: MyString
-  corners: 
+  name: リビング
+  corners: '[[0, 0], [3000, 0], [3000, 2000], [0, 2000]]'
 
 two:
-  name: MyString
-  corners: 
+  name: 寝室
+  corners: '[[0, 0], [2500, 0], [2500, 2500], [0, 2500]]'

@@ -2,6 +2,8 @@ require "test_helper"
 
 class RoomTest < ActiveSupport::TestCase
   # バリデーション
-  validates :name, presence: true
-  validates :corners, presence: true
+  context "validations" do
+    should validate_presence_of(:name)
+    should validate_presence_of(:corners)
+  end
 end
