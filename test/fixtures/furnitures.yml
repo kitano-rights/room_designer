@@ -2,14 +2,14 @@
 
 one:
   room: one
-  kind: MyString
+  kind: desk
   pos_x: 1.5
   pos_y: 1.5
   rotation: 1.5
 
 two:
   room: two
-  kind: MyString
+  kind: bed
   pos_x: 1.5
   pos_y: 1.5
   rotation: 1.5
