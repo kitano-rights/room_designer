@@ -10,11 +10,24 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_01_144749) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_07_071159) do
+  create_table "furnitures", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "kind", null: false
+    t.float "pos_x", default: 0.0, null: false
+    t.float "pos_y", default: 0.0, null: false
+    t.integer "room_id", null: false
+    t.float "rotation", default: 0.0, null: false
+    t.datetime "updated_at", null: false
+    t.index ["room_id"], name: "index_furnitures_on_room_id"
+  end
+
   create_table "rooms", force: :cascade do |t|
     t.json "corners", default: [], null: false
     t.datetime "created_at", null: false
     t.string "name", default: "無題の部屋", null: false
     t.datetime "updated_at", null: false
   end
+
+  add_foreign_key "furnitures", "rooms"
 end
