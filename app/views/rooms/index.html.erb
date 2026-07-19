@@ -1,0 +1,25 @@
+<%# パンくずリスト %>
+
+<%# title %>
+<h2>部屋一覧</h2>
+
+<%# 検索フォーム %>
+
+<%# 新規作成への導線（実装は別Issue） %>
+<%= link_to "新規登録", new_room_path %>
+
+<%# テーブル : ヘッダーは以下に記述 %>
+<table>
+  <thead>
+    <tr>
+      <th>部屋名</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @rooms.each do |room| %>
+      <tr>
+        <td><%= link_to room.name, room_path(room) %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
