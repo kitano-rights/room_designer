@@ -20,14 +20,17 @@
 
     <%# Includes all stylesheet files in app/assets/stylesheets %>
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+    <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
   </head>
 
-  <body>
-    <header>
-      <h1><%= link_to "RoomDesigner", root_path %></h1>
+  <body class="min-h-screen bg-base-200">
+    <header class="navbar bg-base-100 shadow-sm">
+      <h1><%= link_to "RoomDesigner", root_path, class: "btn btn-ghost text-xl" %></h1>
     </header>
 
-    <%= yield %>
+    <main class="container mx-auto p-6">
+      <%= yield %>
+    </main>
   </body>
 </html>
