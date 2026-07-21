@@ -1,2 +1,12 @@
-<h1>Rooms#show</h1>
-<p>Find me in app/views/rooms/show.html.erb</p>
+<%# タイトルと画面遷移リンク %>
+<div class="mb-4 flex items-center justify-between">
+  <h2 class="text-2xl font-bold"><%= @room.name %></h2>
+  <div class="flex gap-2">
+    <%= link_to "一覧へ戻る", rooms_path, class: "btn btn-ghost" %>
+    <%= link_to "エディターへ", edit_room_path(@room), class: "btn btn-primary" %>
+  </div>
+</div>
+
+<%# パレット（俯瞰図の表示領域） %>
+<%# 部屋の形（corners）と家具の描画は edit 実装後に対応する %>
+<div id="palette" class="bg-base-100 rounded-box shadow-sm aspect-video"></div>
