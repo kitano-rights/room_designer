@@ -9,7 +9,7 @@ one:
 
 two:
   room: two
-  kind: bed
+  kind: sofa
   pos_x: 1.5
   pos_y: 1.5
   rotation: 1.5

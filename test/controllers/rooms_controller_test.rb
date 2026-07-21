@@ -30,6 +30,18 @@ class RoomsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "show should display room name and navigation links" do
+    get room_url(@room)
+    assert_select "h2", text: @room.name
+    assert_select "a[href=?]", rooms_path, text: "一覧へ戻る"
+    assert_select "a[href=?]", edit_room_path(@room), text: "エディターへ"
+  end
+
+  test "show should display palette area" do
+    get room_url(@room)
+    assert_select "#palette"
+  end
+
   test "should get new" do
     get new_room_url
     assert_response :success
