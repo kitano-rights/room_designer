@@ -1,25 +1,40 @@
 <%# パンくずリスト %>
 
 <%# title %>
-<h2>部屋一覧</h2>
+<h2 class="text-2xl font-bold mb-4">部屋一覧</h2>
 
 <%# 検索フォーム %>
 
-<%# 新規作成への導線（実装は別Issue） %>
-<%= link_to "新規登録", new_room_path %>
+<%# 新規作成（モーダルで name を入力して作成 → エディターへ） %>
+<%# バリデーションエラー時（create の再描画）はモーダルを開いた状態で表示する %>
+<div data-controller="modal" data-modal-open-value="<%= @room.errors.any? %>" class="mb-4">
+  <button type="button" class="btn btn-primary" data-action="modal#open">新規作成</button>
+
+  <dialog class="modal" data-modal-target="dialog">
+    <div class="modal-box">
+      <button type="button" class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2" data-action="modal#close" aria-label="閉じる">✕</button>
+      <h3 class="text-lg font-bold mb-4">部屋の新規作成</h3>
+      <%= render "form", room: @room %>
+    </div>
+    <%# 背景クリックで閉じる（dialog の標準機能） %>
+    <form method="dialog" class="modal-backdrop"><button>閉じる</button></form>
+  </dialog>
+</div>
 
 <%# テーブル : ヘッダーは以下に記述 %>
-<table>
-  <thead>
-    <tr>
-      <th>部屋名</th>
-    </tr>
-  </thead>
-  <tbody>
-    <% @rooms.each do |room| %>
+<div class="overflow-x-auto bg-base-100 rounded-box shadow-sm">
+  <table class="table">
+    <thead>
       <tr>
-        <td><%= link_to room.name, room_path(room) %></td>
+        <th>部屋名</th>
       </tr>
-    <% end %>
-  </tbody>
-</table>
+    </thead>
+    <tbody>
+      <% @rooms.each do |room| %>
+        <tr>
+          <td><%= link_to room.name, room_path(room), class: "link link-hover" %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>

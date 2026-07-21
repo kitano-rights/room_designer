@@ -1,2 +1,10 @@
-<h1>Rooms#new</h1>
-<p>Find me in app/views/rooms/new.html.erb</p>
+<%# 直接アクセス・バリデーションエラー時のフォールバックページ（通常はモーダルから作成） %>
+<div class="card bg-base-100 shadow-sm max-w-md mx-auto">
+  <div class="card-body">
+    <h2 class="card-title mb-2">部屋の新規作成</h2>
+
+    <%= render "form", room: @room %>
+
+    <%= link_to "一覧へ戻る", rooms_path, class: "link link-hover text-sm mt-2" %>
+  </div>
+</div>

@@ -66,3 +66,5 @@ group :test do
   gem "shoulda-matchers"
   gem "shoulda-context", "~> 3.0.0.rc1"
 end
+
+gem "tailwindcss-rails", "~> 4.6"
