@@ -73,6 +73,28 @@ class RoomsControllerTest < ActionDispatch::IntegrationTest
     assert_includes groups.first.to_s, "rug_000"
   end
 
+  test "show should draw farther furniture beneath nearer one regardless of insertion order" do
+    @room.furnitures.destroy_all
+    @room.furnitures.create!(kind: "chair", pos_x: 2000, pos_y: 2500, rotation: 0)
+    @room.furnitures.create!(kind: "bed", pos_x: 2000, pos_y: 1500, rotation: 0)
+    get room_url(@room)
+    groups = css_select("#palette svg g.furniture")
+    assert_equal 2, groups.size
+    # あとから追加しても奥（pos_y が小さい）のベッドが先＝下に描画される
+    assert_includes groups.first.to_s, "bed_000"
+  end
+
+  test "show should order furniture depth by grounding front edge not by image center" do
+    @room.furnitures.destroy_all
+    # 画像中心の pos_y は机の方が手前だが、背の高い棚は接地面が中心より下に写るため棚が手前
+    @room.furnitures.create!(kind: "shelf", pos_x: 3940, pos_y: 2060, rotation: 90)
+    @room.furnitures.create!(kind: "desk", pos_x: 3220, pos_y: 2120, rotation: 90)
+    get room_url(@room)
+    groups = css_select("#palette svg g.furniture")
+    assert_equal 2, groups.size
+    assert_includes groups.first.to_s, "desk_090"
+  end
+
   test "show with fixed corners should render depth lines" do
     @room.update!(corners: Room::FIXED_CORNERS)
     get room_url(@room)

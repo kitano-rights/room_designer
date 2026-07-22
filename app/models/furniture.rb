@@ -8,15 +8,18 @@ class Furniture < ApplicationRecord
   # image があるものは矩形の代わりにレンダリング画像で描画する
   # （image_size は正方形画像の一辺を SVG 座標系で何 mm 相当にするか）
   # layer: 0 はラグなど床レベルのもの。他の家具（省略時 1）より先に描画して下に敷く
+  # front_offset: 画像中心から接地部の最前端（最下端の不透明ピクセル）までの縦距離（SVG 単位）。
+  # レンダリング画像はモデルの3D中心が画像中心に写るため、背の高い家具ほど接地面が
+  # 画像中心より下になる。描画順の奥行き比較に使う値で、画像のアルファ値から実測した
   KIND_SPECS = {
-    "desk" => { label: "机", width: 1200, depth: 600, image: "desk", image_size: 1290 },
+    "desk" => { label: "机", width: 1200, depth: 600, image: "desk", image_size: 1290, front_offset: 350 },
     "sofa" => { label: "ソファ", width: 1600, depth: 700 },
-    "shelf" => { label: "棚", width: 800, depth: 300, image: "shelf", image_size: 1800 },
-    "chair" => { label: "椅子", width: 450, depth: 450, image: "chair", image_size: 1200 },
+    "shelf" => { label: "棚", width: 800, depth: 300, image: "shelf", image_size: 1800, front_offset: 679 },
+    "chair" => { label: "椅子", width: 450, depth: 450, image: "chair", image_size: 1200, front_offset: 504 },
     "cabinet" => { label: "キャビネット", width: 900, depth: 450 },
     "appliance" => { label: "家電", width: 600, depth: 600 },
-    "rug" => { label: "ラグ", width: 2000, depth: 2000, image: "rug", image_size: 2150, layer: 0 },
-    "bed" => { label: "ベッド", width: 1000, depth: 2000, image: "bed", image_size: 2510 }
+    "rug" => { label: "ラグ", width: 2000, depth: 2000, image: "rug", image_size: 2150, layer: 0, front_offset: 395 },
+    "bed" => { label: "ベッド", width: 1000, depth: 2000, image: "bed", image_size: 2510, front_offset: 539 }
   }.freeze
 
   # 画像で描画する家具の回転角を、画像が存在する 90 度刻みへ丸める

@@ -10,6 +10,8 @@ const ROTATION_STEP = 90
 // 区画の分割数（床: 6×6、壁: 横は床と共通の6 × 縦3）
 const FLOOR_DIVISIONS = 6
 const WALL_DIVISIONS = 3
+// 家具画像の当たり判定でヒットとみなすアルファ値の下限（うっすらした縁は無視する）
+const ALPHA_HIT_THRESHOLD = 32
 
 // 部屋エディター（SVG）
 // - 部屋の形: 固定（形状・サイズの編集は当面行わない）
@@ -36,9 +38,15 @@ export default class extends Controller {
     this.floorColor = this.floorColorValue
     this.selectedIndex = null
 
-    // 何もない場所のクリックで家具の選択を解除する
-    // （家具側のハンドラは stopPropagation でここまで届かない）
-    this.svgTarget.addEventListener("pointerdown", () => this.deselect())
+    // 当たり判定は SVG 一箇所で行う。画像の透明部分を無視して手前の家具から
+    // 判定するため、要素ごとのヒットではなくアルファ値のピクセル判定を使う
+    this.alphaMaps = {}
+    this.loadAlphaMaps()
+    this.svgTarget.addEventListener("pointerdown", (event) => this.onPointerDown(event))
+    this.svgTarget.addEventListener("pointermove", (event) => {
+      const hovering = this.furnitureIndexAt(this.svgPoint(event)) !== null
+      this.svgTarget.style.cursor = hovering ? "move" : "default"
+    })
 
     this.renderRoom()
     this.renderColorButtons()
@@ -213,11 +221,7 @@ export default class extends Controller {
   }
 
   renderFurnitures() {
-    // ラグなど床レベルの家具（layer: 0）を先に描いて他の家具の下に敷く。同レイヤーは追加順
-    const ordered = this.furnitures
-      .map((furniture, index) => ({ furniture, index }))
-      .sort((a, b) => (this.layerOf(a.furniture) - this.layerOf(b.furniture)) || (a.index - b.index))
-    this.furnitureLayerTarget.replaceChildren(...ordered.map(({ furniture, index }) => {
+    this.furnitureLayerTarget.replaceChildren(...this.drawOrder().map(({ furniture, index }) => {
       const spec = this.kindSpecsValue[furniture.kind]
       const selected = index === this.selectedIndex
 
@@ -225,18 +229,37 @@ export default class extends Controller {
       const group = this.svgElement("g", {
         transform: spec.images
           ? `translate(${furniture.pos_x} ${furniture.pos_y})`
-          : `translate(${furniture.pos_x} ${furniture.pos_y}) rotate(${furniture.rotation})`,
-        cursor: "move"
+          : `translate(${furniture.pos_x} ${furniture.pos_y}) rotate(${furniture.rotation})`
       })
       if (spec.images) {
         this.appendFurnitureImage(group, spec, furniture, selected)
       } else {
         this.appendFurnitureRect(group, spec, selected)
       }
-
-      group.addEventListener("pointerdown", (event) => this.startFurnitureDrag(event, index))
       return group
     }))
+  }
+
+  // 家具の描画順。ラグなど床レベルの家具（layer: 0）を先に描いて他の家具の下に敷き、
+  // 同レイヤーでは奥から描いて手前の家具を前面に重ねる
+  drawOrder() {
+    return this.furnitures
+      .map((furniture, index) => ({ furniture, index }))
+      .sort((a, b) =>
+        (this.layerOf(a.furniture) - this.layerOf(b.furniture)) ||
+        (this.frontYOf(a.furniture) - this.frontYOf(b.furniture)) ||
+        (a.index - b.index))
+  }
+
+  // 奥行き比較に使う「家具の接地部の手前端」の y。中心（pos_y）同士だと背の高い家具ほど
+  // 接地面が画像中心より下に写るぶん奥に判定されてしまうため、実測の front_offset で補正する
+  frontYOf(furniture) {
+    const spec = this.kindSpecsValue[furniture.kind]
+    if (spec.front_offset !== undefined) return furniture.pos_y + spec.front_offset
+
+    // 矩形描画の家具は回転後の矩形の下端
+    const radian = (furniture.rotation * Math.PI) / 180
+    return furniture.pos_y + (Math.abs(Math.sin(radian)) * spec.width + Math.abs(Math.cos(radian)) * spec.depth) / 2
   }
 
   // 4方向レンダリング画像の家具。選択中は破線の枠で示す
@@ -285,10 +308,81 @@ export default class extends Controller {
     group.appendChild(label)
   }
 
+  // --- 当たり判定 ---
+
+  // 家具画像を読み込んでアルファ値を控えておく（ピクセル単位の当たり判定に使う）
+  loadAlphaMaps() {
+    const hrefs = new Set(Object.values(this.kindSpecsValue)
+      .flatMap((spec) => spec.images ? Object.values(spec.images) : []))
+    hrefs.forEach((href) => {
+      const image = new Image()
+      image.onload = () => {
+        const canvas = document.createElement("canvas")
+        canvas.width = image.naturalWidth
+        canvas.height = image.naturalHeight
+        const context = canvas.getContext("2d")
+        context.drawImage(image, 0, 0)
+        const { data, width, height } = context.getImageData(0, 0, canvas.width, canvas.height)
+        // RGBA のうちアルファ値だけを取り出して保持する
+        const alpha = new Uint8Array(width * height)
+        for (let i = 0; i < alpha.length; i++) alpha[i] = data[i * 4 + 3]
+        this.alphaMaps[href] = { alpha, width, height }
+      }
+      image.src = href
+    })
+  }
+
+  onPointerDown(event) {
+    const index = this.furnitureIndexAt(this.svgPoint(event))
+    if (index === null) {
+      this.deselect()
+      return
+    }
+    this.startFurnitureDrag(event, index)
+  }
+
+  // 指定位置にある家具のうち、描画順で最前面のもの。なければ null
+  furnitureIndexAt(point) {
+    const ordered = this.drawOrder()
+    for (let i = ordered.length - 1; i >= 0; i--) {
+      const { furniture, index } = ordered[i]
+      const spec = this.kindSpecsValue[furniture.kind]
+      const hit = spec.images
+        ? this.hitsOpaquePixel(point, furniture, spec)
+        : this.hitsRect(point, furniture, spec)
+      if (hit) return index
+    }
+    return null
+  }
+
+  // 画像の家具は不透明ピクセルに触れたときだけヒットさせる（透明の余白は素通し）
+  hitsOpaquePixel(point, furniture, spec) {
+    const size = spec.image_size
+    const u = (point.x - furniture.pos_x + size / 2) / size
+    const v = (point.y - furniture.pos_y + size / 2) / size
+    if (u < 0 || u >= 1 || v < 0 || v >= 1) return false
+
+    // 画像の読み込みが済むまでは矩形全体で判定する
+    const map = this.alphaMaps[spec.images[this.normalizeRotation(furniture.rotation)]]
+    if (!map) return true
+    const x = Math.floor(u * map.width)
+    const y = Math.floor(v * map.height)
+    return map.alpha[y * map.width + x] >= ALPHA_HIT_THRESHOLD
+  }
+
+  // 矩形描画の家具は回転を戻したローカル座標で判定する
+  hitsRect(point, furniture, spec) {
+    const radian = (-furniture.rotation * Math.PI) / 180
+    const dx = point.x - furniture.pos_x
+    const dy = point.y - furniture.pos_y
+    const localX = dx * Math.cos(radian) - dy * Math.sin(radian)
+    const localY = dx * Math.sin(radian) + dy * Math.cos(radian)
+    return Math.abs(localX) <= spec.width / 2 && Math.abs(localY) <= spec.depth / 2
+  }
+
   // --- ドラッグ ---
 
   startFurnitureDrag(event, index) {
-    event.stopPropagation()
     this.selectedIndex = index
     this.render()
 
