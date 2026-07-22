@@ -155,6 +155,39 @@ class RoomsControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ 1000.0, 800.0, 90.0 ], [ sofa.pos_x, sofa.pos_y, sofa.rotation ]
   end
 
+  test "update with json should save wall and floor colors" do
+    patch room_url(@room), params: {
+      room: { corners: @room.corners, furnitures: [], wall_color: "#ffffff", floor_color: "#ffffff" }
+    }, as: :json
+    assert_response :no_content
+
+    @room.reload
+    assert_equal "#ffffff", @room.wall_color
+    assert_equal "#ffffff", @room.floor_color
+  end
+
+  test "update with json should save wall and floor texture keys" do
+    patch room_url(@room), params: {
+      room: {
+        corners: @room.corners, furnitures: [],
+        wall_color: "wallpaper_fabric_white", floor_color: "flooring_wood_natural"
+      }
+    }, as: :json
+    assert_response :no_content
+
+    @room.reload
+    assert_equal "wallpaper_fabric_white", @room.wall_color
+    assert_equal "flooring_wood_natural", @room.floor_color
+  end
+
+  test "update with json invalid color should return 422" do
+    patch room_url(@room), params: {
+      room: { corners: @room.corners, furnitures: [], wall_color: "#123456" }
+    }, as: :json
+    assert_response :unprocessable_entity
+    assert_equal "#ffffff", @room.reload.wall_color
+  end
+
   test "update with json and no furnitures should clear existing furnitures" do
     patch room_url(@room), params: {
       room: { corners: [ [ 0, 0 ], [ 2000, 0 ], [ 2000, 2000 ] ], furnitures: [] }

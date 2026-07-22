@@ -63,7 +63,7 @@ class RoomsController < ApplicationController
   # 家具は既存を全て消して送信された内容で入れ直す
   def update_layout
     Room.transaction do
-      @room.update!(corners: corners_param)
+      @room.update!(corners: corners_param, **color_params)
       @room.furnitures.destroy_all
       furnitures_param.each { |attrs| @room.furnitures.create!(attrs) }
     end
@@ -80,6 +80,11 @@ class RoomsController < ApplicationController
       raise ArgumentError unless point.is_a?(Array) && point.size == 2
       point.map { |value| Float(value) }
     end
+  end
+
+  # 壁紙・フローリングの色（未送信ならキーごと省き、既存値を保つ）
+  def color_params
+    params.fetch(:room, {}).permit(:wall_color, :floor_color).to_h.symbolize_keys
   end
 
   def furnitures_param

@@ -1,0 +1,28 @@
+<%# 立体感を出すための陰影（固定形状専用）。面の塗りの上に半透明で重ねる %>
+<%# ・右の壁を全体的に暗くして左右の壁に明度差を作る %>
+<%# ・壁同士の入隅、壁と床の際に近いほど暗いグラデーションを敷く（アンビエントオクルージョン風） %>
+<defs>
+  <%# 入隅（x=2500 の縦の角）から左右の壁へ向かって薄くなる影 %>
+  <linearGradient id="shade-corner-left" gradientUnits="userSpaceOnUse" x1="2500" y1="0" x2="1600" y2="0">
+    <stop offset="0" stop-color="#0f172a" stop-opacity="0.22" />
+    <stop offset="1" stop-color="#0f172a" stop-opacity="0" />
+  </linearGradient>
+  <linearGradient id="shade-corner-right" gradientUnits="userSpaceOnUse" x1="2500" y1="0" x2="3400" y2="0">
+    <stop offset="0" stop-color="#0f172a" stop-opacity="0.22" />
+    <stop offset="1" stop-color="#0f172a" stop-opacity="0" />
+  </linearGradient>
+  <%# 壁と床の際から床の中へ向かって薄くなる影（壁の際の辺と平行に減衰させる） %>
+  <linearGradient id="shade-floor-left" gradientUnits="userSpaceOnUse" x1="1450" y1="2000" x2="1664" y2="2561">
+    <stop offset="0" stop-color="#0f172a" stop-opacity="0.30" />
+    <stop offset="1" stop-color="#0f172a" stop-opacity="0" />
+  </linearGradient>
+  <linearGradient id="shade-floor-right" gradientUnits="userSpaceOnUse" x1="3550" y1="2000" x2="3336" y2="2561">
+    <stop offset="0" stop-color="#0f172a" stop-opacity="0.30" />
+    <stop offset="1" stop-color="#0f172a" stop-opacity="0" />
+  </linearGradient>
+</defs>
+<polygon points="<%= svg_polygon_points(Room::FIXED_WALL_POLYGONS[1]) %>" fill="#0f172a" opacity="0.16" />
+<polygon points="<%= svg_polygon_points(Room::FIXED_WALL_POLYGONS[0]) %>" fill="url(#shade-corner-left)" />
+<polygon points="<%= svg_polygon_points(Room::FIXED_WALL_POLYGONS[1]) %>" fill="url(#shade-corner-right)" />
+<polygon points="<%= svg_polygon_points(Room::FIXED_FLOOR_POLYGON) %>" fill="url(#shade-floor-left)" />
+<polygon points="<%= svg_polygon_points(Room::FIXED_FLOOR_POLYGON) %>" fill="url(#shade-floor-right)" />
