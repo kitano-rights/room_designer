@@ -5,6 +5,9 @@ const SVG_NS = "http://www.w3.org/2000/svg"
 const WORLD = { width: 5000, height: 4000 }
 // 座標の丸め単位（mm）
 const SNAP = 10
+// 区画の分割数（床: 6×6、壁: 横は床と共通の6 × 縦3）
+const FLOOR_DIVISIONS = 6
+const WALL_DIVISIONS = 3
 
 // 部屋エディター（SVG）
 // - 部屋の形: 固定（形状・サイズの編集は当面行わない）
@@ -86,10 +89,16 @@ export default class extends Controller {
   // --- 描画 ---
 
   // 部屋の形は固定なので接続時に一度だけ描画する
-  // 奥行き線が輪郭線の下に隠れるよう、塗り → 奥行き線 → 輪郭線 の順に重ねる
+  // 区画線が境目・輪郭線の下に隠れるよう、塗り → 区画線 → 奥行き線 → 輪郭線 の順に重ねる
   renderRoom() {
     const points = this.cornersValue.map((point) => point.join(",")).join(" ")
     const floor = this.svgElement("polygon", { points, fill: "#f8fafc" })
+    // 床・壁を等分する区画線
+    const sectionLines = this.sectionLines().map(([from, to]) => this.svgElement("line", {
+      x1: from.x, y1: from.y, x2: to.x, y2: to.y,
+      stroke: "#d1d5db",
+      "stroke-width": 10
+    }))
     // 奥行きを表す内側の線（壁と壁・壁と床の境目）
     const depthLines = this.depthLinesValue.map(([from, to]) => this.svgElement("line", {
       x1: from[0], y1: from[1], x2: to[0], y2: to[1],
@@ -103,7 +112,40 @@ export default class extends Controller {
       "stroke-width": 40,
       "stroke-linejoin": "round"
     })
-    this.roomLayerTarget.replaceChildren(floor, ...depthLines, outline)
+    this.roomLayerTarget.replaceChildren(floor, ...sectionLines, ...depthLines, outline)
+  }
+
+  // 床 6×6・壁 6×3 の区画線（内側の線のみ。外周・境目は既存の線が担う）
+  // 奥行き線の端点から、部屋の奥の角・床の左右の辺・壁の高さを求めて等分する
+  sectionLines() {
+    const [[inner, top], [, leftBottom], [, rightBottom]] = this.depthLinesValue
+    const [cx, cy] = inner
+    // 奥の角から床の左下・右下の頂点へ向かうベクトル（床の2辺）
+    const edges = [
+      { x: leftBottom[0] - cx, y: leftBottom[1] - cy },
+      { x: rightBottom[0] - cx, y: rightBottom[1] - cy }
+    ]
+    const wallHeight = cy - top[1]
+    const lines = []
+
+    edges.forEach((edge, index) => {
+      const opposite = edges[1 - index]
+      for (let i = 1; i < FLOOR_DIVISIONS; i++) {
+        const t = i / FLOOR_DIVISIONS
+        const x = cx + edge.x * t
+        const y = cy + edge.y * t
+        // 床: この辺を6等分し、対辺と平行に引く線
+        lines.push([{ x, y }, { x: x + opposite.x, y: y + opposite.y }])
+        // 壁: 床の6等分と揃えた縦線
+        lines.push([{ x, y: y - wallHeight }, { x, y }])
+      }
+      // 壁: 高さを3等分する横線
+      for (let j = 1; j < WALL_DIVISIONS; j++) {
+        const y = cy - (wallHeight * j) / WALL_DIVISIONS
+        lines.push([{ x: cx, y }, { x: cx + edge.x, y: y + edge.y }])
+      }
+    })
+    return lines
   }
 
   render() {
