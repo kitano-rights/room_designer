@@ -29,6 +29,7 @@
           <line x1="<%= x1 %>" y1="<%= y1 %>" x2="<%= x2 %>" y2="<%= y2 %>"
                 stroke="#d1d5db" stroke-width="20" />
         <% end %>
+        <%= render "room_baseboard" %>
         <%= render "room_shading" %>
       <% else %>
         <polygon points="<%= svg_polygon_points(@room.corners) %>" fill="#f8fafc" />
