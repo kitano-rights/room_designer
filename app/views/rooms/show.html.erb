@@ -8,5 +8,31 @@
 </div>
 
 <%# パレット（俯瞰図の表示領域） %>
-<%# 部屋の形（corners）と家具の描画は edit 実装後に対応する %>
-<div id="palette" class="bg-base-100 rounded-box shadow-sm aspect-video"></div>
+<div id="palette" class="bg-base-100 rounded-box shadow-sm p-4">
+  <% if @room.corners.size < 3 %>
+    <p class="text-center text-base-content/60 py-24">部屋の形がまだありません。エディターで作成してください。</p>
+  <% else %>
+    <svg viewBox="<%= room_view_box(@room.corners) %>" class="w-full max-h-[70vh]">
+      <%# 奥行き線が輪郭線の下に隠れるよう、塗り → 奥行き線 → 輪郭線 の順に重ねる %>
+      <polygon points="<%= svg_polygon_points(@room.corners) %>" fill="#f8fafc" />
+      <%# 奥行きを表す内側の線（壁と壁・壁と床の境目）。固定形状の部屋にのみ描画する %>
+      <% if @room.corners == Room::FIXED_CORNERS %>
+        <% Room::FIXED_DEPTH_LINES.each do |(x1, y1), (x2, y2)| %>
+          <line x1="<%= x1 %>" y1="<%= y1 %>" x2="<%= x2 %>" y2="<%= y2 %>"
+                stroke="#d1d5db" stroke-width="20" />
+        <% end %>
+      <% end %>
+      <polygon points="<%= svg_polygon_points(@room.corners) %>"
+               fill="none" stroke="#334155" stroke-width="40" stroke-linejoin="round" />
+      <% @room.furnitures.each do |furniture| %>
+        <% spec = Furniture::KIND_SPECS[furniture.kind] %>
+        <g class="furniture" transform="translate(<%= furniture.pos_x %> <%= furniture.pos_y %>) rotate(<%= furniture.rotation %>)">
+          <rect x="<%= -spec[:width] / 2.0 %>" y="<%= -spec[:depth] / 2.0 %>"
+                width="<%= spec[:width] %>" height="<%= spec[:depth] %>" rx="40"
+                fill="#fef3c7" stroke="#d97706" stroke-width="20" />
+          <text text-anchor="middle" dominant-baseline="central" font-size="150" fill="#78350f"><%= spec[:label] %></text>
+        </g>
+      <% end %>
+    </svg>
+  <% end %>
+</div>

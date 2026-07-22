@@ -1,2 +1,54 @@
-<h1>Rooms#edit</h1>
-<p>Find me in app/views/rooms/edit.html.erb</p>
+<%# タイトルと画面遷移リンク %>
+<div class="mb-4 flex items-center justify-between">
+  <h2 class="text-2xl font-bold"><%= @room.name %> のエディター</h2>
+  <div class="flex gap-2">
+    <%= link_to "一覧へ戻る", rooms_path, class: "btn btn-ghost" %>
+    <%= link_to "俯瞰へ", room_path(@room), class: "btn btn-ghost" %>
+  </div>
+</div>
+
+<%# 部屋の形は当面固定（Room::FIXED_CORNERS）。エディターでは家具の配置のみ編集できる %>
+<div data-controller="room-editor"
+     data-room-editor-corners-value="<%= Room::FIXED_CORNERS.to_json %>"
+     data-room-editor-depth-lines-value="<%= Room::FIXED_DEPTH_LINES.to_json %>"
+     data-room-editor-furnitures-value="<%= @room.furnitures.map { |f| f.slice(:kind, :pos_x, :pos_y, :rotation) }.to_json %>"
+     data-room-editor-kind-specs-value="<%= Furniture::KIND_SPECS.to_json %>"
+     data-room-editor-update-url-value="<%= room_path(@room) %>"
+     data-room-editor-show-url-value="<%= room_path(@room) %>">
+
+  <%# ツールバー: 家具パレット / 選択中家具の操作 / 保存 %>
+  <div class="mb-3 flex flex-wrap items-center gap-2">
+    <% Furniture::KIND_SPECS.each do |kind, spec| %>
+      <button type="button" class="btn btn-sm" data-kind="<%= kind %>" data-action="room-editor#addFurniture">
+        + <%= spec[:label] %>
+      </button>
+    <% end %>
+
+    <div class="invisible flex gap-2 ml-2" data-room-editor-target="furnitureActions">
+      <button type="button" class="btn btn-sm btn-info" data-action="room-editor#rotateSelected">回転</button>
+      <button type="button" class="btn btn-sm btn-error" data-action="room-editor#deleteSelected">削除</button>
+    </div>
+
+    <button type="button" class="btn btn-primary ml-auto" data-room-editor-target="saveButton" data-action="room-editor#save">保存</button>
+  </div>
+
+  <%# 編集キャンバス %>
+  <div class="bg-base-100 rounded-box shadow-sm p-2">
+    <svg viewBox="0 0 5000 4000" class="w-full h-auto touch-none select-none" data-room-editor-target="svg">
+      <defs>
+        <pattern id="grid" width="500" height="500" patternUnits="userSpaceOnUse">
+          <path d="M 500 0 L 0 0 0 500" fill="none" stroke="#e5e7eb" stroke-width="10" />
+        </pattern>
+      </defs>
+      <rect width="5000" height="4000" fill="#ffffff" />
+      <rect width="5000" height="4000" fill="url(#grid)" />
+      <g data-room-editor-target="roomLayer"></g>
+      <g data-room-editor-target="furnitureLayer"></g>
+    </svg>
+  </div>
+
+  <p class="text-sm text-base-content/60 mt-2">
+    家具：ボタンで追加し、ドラッグで移動。クリックで選択すると回転・削除できます。
+    部屋の形は固定です。グリッドは 500mm 間隔です。
+  </p>
+</div>

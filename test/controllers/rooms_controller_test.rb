@@ -42,6 +42,25 @@ class RoomsControllerTest < ActionDispatch::IntegrationTest
     assert_select "#palette"
   end
 
+  test "show should render room shape and furnitures in svg" do
+    get room_url(@room)
+    assert_select "#palette svg polygon"
+    assert_select "#palette svg g.furniture", count: @room.furnitures.count
+  end
+
+  test "show with fixed corners should render depth lines" do
+    @room.update!(corners: Room::FIXED_CORNERS)
+    get room_url(@room)
+    assert_select "#palette svg line", count: Room::FIXED_DEPTH_LINES.size
+  end
+
+  test "show without corners should display placeholder message" do
+    @room.update!(corners: [])
+    get room_url(@room)
+    assert_select "#palette svg", count: 0
+    assert_select "#palette p", text: /部屋の形がまだありません/
+  end
+
   test "should get new" do
     get new_room_url
     assert_response :success
@@ -71,6 +90,17 @@ class RoomsControllerTest < ActionDispatch::IntegrationTest
   test "should get edit" do
     get edit_room_url(@room)
     assert_response :success
+  end
+
+  test "edit should display editor with room data and navigation links" do
+    get edit_room_url(@room)
+    assert_select "[data-controller=room-editor]"
+    assert_select "[data-room-editor-corners-value]"
+    assert_select "[data-room-editor-furnitures-value]"
+    assert_select "a[href=?]", rooms_path, text: "一覧へ戻る"
+    assert_select "a[href=?]", room_path(@room), text: "俯瞰へ"
+    assert_select "button[data-kind]", count: Furniture::KIND_SPECS.size
+    assert_select "button", text: "保存"
   end
 
   test "index should have edit modal with form for each room" do
@@ -103,6 +133,56 @@ class RoomsControllerTest < ActionDispatch::IntegrationTest
     # 該当行の編集モーダルだけが開いた状態で再描画される
     assert_select "[data-modal-open-value=?]", "true", count: 1
     assert_select "dialog .text-error"
+  end
+
+  test "update with json should save corners and replace furnitures" do
+    assert_equal 1, @room.furnitures.count
+    patch room_url(@room), params: {
+      room: {
+        corners: [ [ 0, 0 ], [ 4000, 0 ], [ 4000, 3000 ], [ 0, 3000 ] ],
+        furnitures: [
+          { kind: "sofa", pos_x: 1000, pos_y: 800, rotation: 90 },
+          { kind: "chair", pos_x: 2000, pos_y: 1500, rotation: 45 }
+        ]
+      }
+    }, as: :json
+    assert_response :no_content
+
+    @room.reload
+    assert_equal [ [ 0, 0 ], [ 4000, 0 ], [ 4000, 3000 ], [ 0, 3000 ] ], @room.corners
+    assert_equal %w[sofa chair], @room.furnitures.order(:id).pluck(:kind)
+    sofa = @room.furnitures.order(:id).first
+    assert_equal [ 1000.0, 800.0, 90.0 ], [ sofa.pos_x, sofa.pos_y, sofa.rotation ]
+  end
+
+  test "update with json and no furnitures should clear existing furnitures" do
+    patch room_url(@room), params: {
+      room: { corners: [ [ 0, 0 ], [ 2000, 0 ], [ 2000, 2000 ] ], furnitures: [] }
+    }, as: :json
+    assert_response :no_content
+    assert_equal 0, @room.reload.furnitures.count
+  end
+
+  test "update with json invalid furniture kind should return 422 and keep existing data" do
+    original_corners = @room.corners
+    patch room_url(@room), params: {
+      room: {
+        corners: [ [ 0, 0 ], [ 1000, 0 ], [ 1000, 1000 ] ],
+        furnitures: [ { kind: "table", pos_x: 0, pos_y: 0, rotation: 0 } ]
+      }
+    }, as: :json
+    assert_response :unprocessable_entity
+
+    @room.reload
+    assert_equal original_corners, @room.corners
+    assert_equal 1, @room.furnitures.count
+  end
+
+  test "update with json invalid corners format should return 422" do
+    patch room_url(@room), params: {
+      room: { corners: [ [ 0 ], [ 1000, 0 ] ], furnitures: [] }
+    }, as: :json
+    assert_response :unprocessable_entity
   end
 
   test "destroy should delete room and redirect to index" do
