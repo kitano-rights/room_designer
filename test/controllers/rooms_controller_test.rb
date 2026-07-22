@@ -48,6 +48,31 @@ class RoomsControllerTest < ActionDispatch::IntegrationTest
     assert_select "#palette svg g.furniture", count: @room.furnitures.count
   end
 
+  test "show should render furniture with rendered image as svg image" do
+    @room.furnitures.destroy_all
+    @room.furnitures.create!(kind: "shelf", pos_x: 2000, pos_y: 2000, rotation: 90)
+    get room_url(@room)
+    assert_select "#palette svg g.furniture image[href*=?]", "shelf_090"
+  end
+
+  test "show should round furniture rotation to available image angles" do
+    @room.furnitures.destroy_all
+    @room.furnitures.create!(kind: "shelf", pos_x: 2000, pos_y: 2000, rotation: 45)
+    get room_url(@room)
+    assert_select "#palette svg g.furniture image[href*=?]", "shelf_090"
+  end
+
+  test "show should draw floor-level furniture beneath other furnitures" do
+    @room.furnitures.destroy_all
+    @room.furnitures.create!(kind: "desk", pos_x: 1000, pos_y: 1000, rotation: 0)
+    @room.furnitures.create!(kind: "rug", pos_x: 2000, pos_y: 2000, rotation: 0)
+    get room_url(@room)
+    groups = css_select("#palette svg g.furniture")
+    assert_equal 2, groups.size
+    # あとから追加してもラグ（layer: 0）が先＝床側に描画される
+    assert_includes groups.first.to_s, "rug_000"
+  end
+
   test "show with fixed corners should render depth lines" do
     @room.update!(corners: Room::FIXED_CORNERS)
     get room_url(@room)

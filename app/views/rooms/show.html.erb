@@ -37,14 +37,23 @@
       <%# 輪郭線は陰影で立体感が出る分、細めに抑える %>
       <polygon points="<%= svg_polygon_points(@room.corners) %>"
                fill="none" stroke="#334155" stroke-width="15" stroke-linejoin="round" />
-      <% @room.furnitures.each do |furniture| %>
+      <% furnitures_in_draw_order(@room.furnitures).each do |furniture| %>
         <% spec = Furniture::KIND_SPECS[furniture.kind] %>
-        <g class="furniture" transform="translate(<%= furniture.pos_x %> <%= furniture.pos_y %>) rotate(<%= furniture.rotation %>)">
-          <rect x="<%= -spec[:width] / 2.0 %>" y="<%= -spec[:depth] / 2.0 %>"
-                width="<%= spec[:width] %>" height="<%= spec[:depth] %>" rx="40"
-                fill="#fef3c7" stroke="#d97706" stroke-width="20" />
-          <text text-anchor="middle" dominant-baseline="central" font-size="150" fill="#78350f"><%= spec[:label] %></text>
-        </g>
+        <% if spec[:image] %>
+          <%# 画像がある家具は4方向レンダリング画像で描画（向きは画像の差し替えで表現するため rotate しない） %>
+          <g class="furniture" transform="translate(<%= furniture.pos_x %> <%= furniture.pos_y %>)">
+            <image href="<%= furniture_image_path(spec, furniture.rotation) %>"
+                   x="<%= -spec[:image_size] / 2.0 %>" y="<%= -spec[:image_size] / 2.0 %>"
+                   width="<%= spec[:image_size] %>" height="<%= spec[:image_size] %>" />
+          </g>
+        <% else %>
+          <g class="furniture" transform="translate(<%= furniture.pos_x %> <%= furniture.pos_y %>) rotate(<%= furniture.rotation %>)">
+            <rect x="<%= -spec[:width] / 2.0 %>" y="<%= -spec[:depth] / 2.0 %>"
+                  width="<%= spec[:width] %>" height="<%= spec[:depth] %>" rx="40"
+                  fill="#fef3c7" stroke="#d97706" stroke-width="20" />
+            <text text-anchor="middle" dominant-baseline="central" font-size="150" fill="#78350f"><%= spec[:label] %></text>
+          </g>
+        <% end %>
       <% end %>
     </svg>
   <% end %>

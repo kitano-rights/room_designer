@@ -5,6 +5,8 @@ const SVG_NS = "http://www.w3.org/2000/svg"
 const WORLD = { width: 5000, height: 4000 }
 // 座標の丸め単位（mm）
 const SNAP = 10
+// 回転の刻み（家具画像を4方向分しか用意しないため90度単位）
+const ROTATION_STEP = 90
 // 区画の分割数（床: 6×6、壁: 横は床と共通の6 × 縦3）
 const FLOOR_DIVISIONS = 6
 const WALL_DIVISIONS = 3
@@ -69,7 +71,7 @@ export default class extends Controller {
     const furniture = this.furnitures[this.selectedIndex]
     if (!furniture) return
 
-    furniture.rotation = (furniture.rotation + 45) % 360
+    furniture.rotation = (this.normalizeRotation(furniture.rotation) + ROTATION_STEP) % 360
     this.render()
   }
 
@@ -211,36 +213,76 @@ export default class extends Controller {
   }
 
   renderFurnitures() {
-    this.furnitureLayerTarget.replaceChildren(...this.furnitures.map((furniture, index) => {
+    // ラグなど床レベルの家具（layer: 0）を先に描いて他の家具の下に敷く。同レイヤーは追加順
+    const ordered = this.furnitures
+      .map((furniture, index) => ({ furniture, index }))
+      .sort((a, b) => (this.layerOf(a.furniture) - this.layerOf(b.furniture)) || (a.index - b.index))
+    this.furnitureLayerTarget.replaceChildren(...ordered.map(({ furniture, index }) => {
       const spec = this.kindSpecsValue[furniture.kind]
       const selected = index === this.selectedIndex
 
+      // 画像がある家具は向きを画像の差し替えで表現するため rotate しない
       const group = this.svgElement("g", {
-        transform: `translate(${furniture.pos_x} ${furniture.pos_y}) rotate(${furniture.rotation})`,
+        transform: spec.images
+          ? `translate(${furniture.pos_x} ${furniture.pos_y})`
+          : `translate(${furniture.pos_x} ${furniture.pos_y}) rotate(${furniture.rotation})`,
         cursor: "move"
       })
-      group.appendChild(this.svgElement("rect", {
-        x: -spec.width / 2,
-        y: -spec.depth / 2,
-        width: spec.width,
-        height: spec.depth,
-        rx: 40,
-        fill: selected ? "#dbeafe" : "#fef3c7",
-        stroke: selected ? "#2563eb" : "#d97706",
-        "stroke-width": selected ? 30 : 20
-      }))
-      const label = this.svgElement("text", {
-        "text-anchor": "middle",
-        "dominant-baseline": "central",
-        "font-size": 150,
-        fill: "#78350f"
-      })
-      label.textContent = spec.label
-      group.appendChild(label)
+      if (spec.images) {
+        this.appendFurnitureImage(group, spec, furniture, selected)
+      } else {
+        this.appendFurnitureRect(group, spec, selected)
+      }
 
       group.addEventListener("pointerdown", (event) => this.startFurnitureDrag(event, index))
       return group
     }))
+  }
+
+  // 4方向レンダリング画像の家具。選択中は破線の枠で示す
+  appendFurnitureImage(group, spec, furniture, selected) {
+    const size = spec.image_size
+    group.appendChild(this.svgElement("image", {
+      href: spec.images[this.normalizeRotation(furniture.rotation)],
+      x: -size / 2,
+      y: -size / 2,
+      width: size,
+      height: size
+    }))
+    if (selected) {
+      group.appendChild(this.svgElement("rect", {
+        x: -size / 2,
+        y: -size / 2,
+        width: size,
+        height: size,
+        fill: "none",
+        stroke: "#2563eb",
+        "stroke-width": 25,
+        "stroke-dasharray": "80 50"
+      }))
+    }
+  }
+
+  // 画像がまだない家具は寸法どおりの矩形とラベルで描く
+  appendFurnitureRect(group, spec, selected) {
+    group.appendChild(this.svgElement("rect", {
+      x: -spec.width / 2,
+      y: -spec.depth / 2,
+      width: spec.width,
+      height: spec.depth,
+      rx: 40,
+      fill: selected ? "#dbeafe" : "#fef3c7",
+      stroke: selected ? "#2563eb" : "#d97706",
+      "stroke-width": selected ? 30 : 20
+    }))
+    const label = this.svgElement("text", {
+      "text-anchor": "middle",
+      "dominant-baseline": "central",
+      "font-size": 150,
+      fill: "#78350f"
+    })
+    label.textContent = spec.label
+    group.appendChild(label)
   }
 
   // --- ドラッグ ---
@@ -283,6 +325,16 @@ export default class extends Controller {
   svgPoint(event) {
     const point = new DOMPoint(event.clientX, event.clientY)
     return point.matrixTransform(this.svgTarget.getScreenCTM().inverse())
+  }
+
+  // 家具の描画レイヤー（layer: 0 = 床レベル。省略時は 1）
+  layerOf(furniture) {
+    return this.kindSpecsValue[furniture.kind].layer ?? 1
+  }
+
+  // 過去に45度刻みで保存された回転角も、画像が存在する90度刻みへ丸める
+  normalizeRotation(rotation) {
+    return ((Math.round(rotation / ROTATION_STEP) * ROTATION_STEP) % 360 + 360) % 360
   }
 
   snapX(value) {

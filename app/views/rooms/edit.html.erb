@@ -16,7 +16,7 @@
      data-room-editor-wall-color-value="<%= @room.wall_color %>"
      data-room-editor-floor-color-value="<%= @room.floor_color %>"
      data-room-editor-furnitures-value="<%= @room.furnitures.map { |f| f.slice(:kind, :pos_x, :pos_y, :rotation) }.to_json %>"
-     data-room-editor-kind-specs-value="<%= Furniture::KIND_SPECS.to_json %>"
+     data-room-editor-kind-specs-value="<%= editor_kind_specs.to_json %>"
      data-room-editor-update-url-value="<%= room_path(@room) %>"
      data-room-editor-show-url-value="<%= room_path(@room) %>">
 
