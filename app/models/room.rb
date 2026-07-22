@@ -47,6 +47,9 @@ class Room < ApplicationRecord
     "木目（ナチュラル）" => "flooring_wood_natural"
   }.freeze
 
+  # 部屋の形は固定のため、新規作成時から俯瞰画面で部屋を表示できるよう固定形状で開始する
+  attribute :corners, default: -> { FIXED_CORNERS }
+
   # 関連
   has_many :furnitures, dependent: :destroy
 
@@ -54,7 +57,7 @@ class Room < ApplicationRecord
   validates :name, presence: true
   validates :wall_color, inclusion: { in: COLOR_PALETTE.values + WALL_TEXTURES.values }
   validates :floor_color, inclusion: { in: COLOR_PALETTE.values + FLOOR_TEXTURES.values }
-  # corners は新規作成時に空配列で開始するため nil のみ不可とする
+  # 過去に空配列で作られた部屋も許容するため nil のみ不可とする
   # （presence だと [] が invalid、exclusion だと空配列が常に invalid になるためカスタム検証）
   validate :corners_must_not_be_nil
 
