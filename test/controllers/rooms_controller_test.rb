@@ -51,7 +51,15 @@ class RoomsControllerTest < ActionDispatch::IntegrationTest
   test "show with fixed corners should render depth lines" do
     @room.update!(corners: Room::FIXED_CORNERS)
     get room_url(@room)
-    assert_select "#palette svg line", count: Room::FIXED_DEPTH_LINES.size
+    # 奥行き線3本 + 巾木の上端線2本
+    assert_select "#palette svg line",
+                  count: Room::FIXED_DEPTH_LINES.size + Room::FIXED_BASEBOARD_POLYGONS.size
+  end
+
+  test "show with fixed corners should render baseboards" do
+    @room.update!(corners: Room::FIXED_CORNERS)
+    get room_url(@room)
+    assert_select "#palette svg polygon[fill=?]", "#f8fafc", count: Room::FIXED_BASEBOARD_POLYGONS.size
   end
 
   test "show without corners should display placeholder message" do

@@ -1,0 +1,8 @@
+<%# 巾木（固定形状専用）。壁と床の際に白い帯を重ね、上端に細い線で壁との境目を出す %>
+<%# 陰影パーシャルより下に重ねることで、入隅・右壁の暗さが巾木にも乗り照明が揃う %>
+<% Room::FIXED_BASEBOARD_POLYGONS.each do |polygon| %>
+  <polygon points="<%= svg_polygon_points(polygon) %>" fill="#f8fafc" />
+  <% (top_from, top_to) = polygon.first(2) %>
+  <line x1="<%= top_from[0] %>" y1="<%= top_from[1] %>" x2="<%= top_to[0] %>" y2="<%= top_to[1] %>"
+        stroke="#d1d5db" stroke-width="10" />
+<% end %>
