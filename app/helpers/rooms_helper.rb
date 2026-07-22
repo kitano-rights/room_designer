@@ -35,6 +35,29 @@ module RoomsHelper
     end
   end
 
+  # 家具の描画順。ラグなど床レベルのもの（layer: 0）を先に描いて他の家具の下に敷く
+  # 同じレイヤー内では追加順を保つ
+  def furnitures_in_draw_order(furnitures)
+    furnitures.each_with_index.sort_by do |furniture, index|
+      [ Furniture::KIND_SPECS[furniture.kind][:layer] || 1, index ]
+    end.map(&:first)
+  end
+
+  # 家具画像（4方向レンダリング）のうち、rotation に対応する角度の画像パスを返す
+  def furniture_image_path(spec, rotation)
+    angle = Furniture.normalize_image_angle(rotation)
+    image_path("furniture/#{spec[:image]}_#{format('%03d', angle)}.png")
+  end
+
+  # エディターの JS へ渡す家具スペック。画像がある家具には角度ごとの画像 URL を添える
+  def editor_kind_specs
+    Furniture::KIND_SPECS.transform_values do |spec|
+      next spec unless spec[:image]
+
+      spec.merge(images: Furniture::IMAGE_ANGLES.index_with { |angle| furniture_image_path(spec, angle) })
+    end
+  end
+
   # 部屋の形全体が余白付きで収まる viewBox を返す
   def room_view_box(corners, padding: 400)
     xs = corners.map(&:first)
