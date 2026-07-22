@@ -1,4 +1,4 @@
-<%# 部屋の作成フォーム（モーダル / new ページ共用） %>
+<%# 部屋の作成・部屋名編集フォーム（モーダル / new ページ共用） %>
 <%= form_with model: room do |f| %>
   <% if room.errors.any? %>
     <ul class="text-error text-sm list-disc list-inside mb-3">
@@ -14,6 +14,6 @@
   </div>
 
   <div class="text-right">
-    <%= f.submit "作成してエディターへ", class: "btn btn-primary" %>
+    <%= f.submit room.new_record? ? "作成してエディターへ" : "更新する", class: "btn btn-primary" %>
   </div>
 <% end %>

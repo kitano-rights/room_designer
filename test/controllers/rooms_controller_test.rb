@@ -72,4 +72,43 @@ class RoomsControllerTest < ActionDispatch::IntegrationTest
     get edit_room_url(@room)
     assert_response :success
   end
+
+  test "index should have edit modal with form for each room" do
+    get rooms_url
+    assert_select "button[aria-label=?]", "部屋名を編集", count: Room.count
+    assert_select "dialog form[action=?]", room_path(@room) do
+      assert_select "input[name=?]", "room[name]"
+    end
+  end
+
+  test "index should have delete confirmation modal for each room" do
+    get rooms_url
+    assert_select "button[aria-label=?]", "部屋を削除", count: Room.count
+    assert_select "dialog form[action=?]", room_path(@room) do
+      assert_select "input[name=_method][value=delete]"
+      assert_select "button", text: "削除する"
+    end
+  end
+
+  test "update should change room name and redirect to index" do
+    patch room_url(@room), params: { room: { name: "書斎" } }
+    assert_redirected_to rooms_path
+    assert_equal "書斎", @room.reload.name
+  end
+
+  test "update with blank name should re-render index with errors in edit modal" do
+    patch room_url(@room), params: { room: { name: "" } }
+    assert_response :unprocessable_entity
+    assert_equal "リビング", @room.reload.name
+    # 該当行の編集モーダルだけが開いた状態で再描画される
+    assert_select "[data-modal-open-value=?]", "true", count: 1
+    assert_select "dialog .text-error"
+  end
+
+  test "destroy should delete room and redirect to index" do
+    assert_difference("Room.count", -1) do
+      delete room_url(@room)
+    end
+    assert_redirected_to rooms_path
+  end
 end
