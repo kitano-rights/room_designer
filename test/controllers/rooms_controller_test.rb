@@ -121,13 +121,13 @@ class RoomsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
-  test "create should make a room with empty corners and redirect to editor" do
+  test "create should make a room with fixed corners and redirect to editor" do
     assert_difference("Room.count") do
       post rooms_url, params: { room: { name: "リビング" } }
     end
     room = Room.order(:id).last
     assert_equal "リビング", room.name
-    assert_equal [], room.corners
+    assert_equal Room::FIXED_CORNERS, room.corners
     assert_redirected_to edit_room_url(room)
   end
 
