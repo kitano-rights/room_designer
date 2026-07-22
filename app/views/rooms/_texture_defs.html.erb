@@ -1,0 +1,20 @@
+<%# 壁紙・フローリングテクスチャの SVG パターン定義（エディター・俯瞰図の <defs> 内で使う） %>
+<%# タイル1枚 = 900mm 相当。実寸より大きめにして引きのズームでも質感が見えるようにしている %>
+
+<%# 壁: アイソメ表示の壁の勾配（高さ800 / 幅2100 ≒ 20.86°）に合わせて左右で逆向きに skew する %>
+<% Room::WALL_TEXTURES.each_value do |key| %>
+  <% { "left" => -20.86, "right" => 20.86 }.each do |side, angle| %>
+    <pattern id="wall-<%= side %>-<%= key %>" width="900" height="675"
+             patternUnits="userSpaceOnUse" patternTransform="skewY(<%= angle %>)">
+      <image href="<%= image_path("textures/#{key}.png") %>" width="900" height="675" />
+    </pattern>
+  <% end %>
+<% end %>
+
+<%# 床: 菱形の2辺（±2100, 800 の単位ベクトル ≒ (±0.9345, 0.356)）へ画像の縦横軸を写して敷く %>
+<% Room::FLOOR_TEXTURES.each_value do |key| %>
+  <pattern id="floor-<%= key %>" width="900" height="900"
+           patternUnits="userSpaceOnUse" patternTransform="matrix(0.9345 0.356 -0.9345 0.356 0 0)">
+    <image href="<%= image_path("textures/#{key}.png") %>" width="900" height="900" />
+  </pattern>
+<% end %>

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_07_071159) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_22_000000) do
   create_table "furnitures", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "kind", null: false
@@ -25,8 +25,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_07_071159) do
   create_table "rooms", force: :cascade do |t|
     t.json "corners", default: [], null: false
     t.datetime "created_at", null: false
+    t.string "floor_color", default: "#ffffff", null: false
     t.string "name", default: "無題の部屋", null: false
     t.datetime "updated_at", null: false
+    t.string "wall_color", default: "#ffffff", null: false
   end
 
   add_foreign_key "furnitures", "rooms"

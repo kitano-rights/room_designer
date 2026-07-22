@@ -11,6 +11,10 @@
 <div data-controller="room-editor"
      data-room-editor-corners-value="<%= Room::FIXED_CORNERS.to_json %>"
      data-room-editor-depth-lines-value="<%= Room::FIXED_DEPTH_LINES.to_json %>"
+     data-room-editor-wall-polygons-value="<%= Room::FIXED_WALL_POLYGONS.to_json %>"
+     data-room-editor-floor-polygon-value="<%= Room::FIXED_FLOOR_POLYGON.to_json %>"
+     data-room-editor-wall-color-value="<%= @room.wall_color %>"
+     data-room-editor-floor-color-value="<%= @room.floor_color %>"
      data-room-editor-furnitures-value="<%= @room.furnitures.map { |f| f.slice(:kind, :pos_x, :pos_y, :rotation) }.to_json %>"
      data-room-editor-kind-specs-value="<%= Furniture::KIND_SPECS.to_json %>"
      data-room-editor-update-url-value="<%= room_path(@room) %>"
@@ -32,6 +36,24 @@
     <button type="button" class="btn btn-primary ml-auto" data-room-editor-target="saveButton" data-action="room-editor#save">保存</button>
   </div>
 
+  <%# 壁紙・フローリングの選択（色 + テクスチャ。選択中は ring-2 で強調） %>
+  <div class="mb-3 flex flex-wrap items-center gap-4">
+    <% { "壁紙" => [ "wallColor", wall_swatches ], "フローリング" => [ "floorColor", floor_swatches ] }.each do |label, (target, swatches)| %>
+      <div class="flex items-center gap-1.5">
+        <span class="text-sm font-bold mr-1"><%= label %></span>
+        <% swatches.each do |name, value, style| %>
+          <button type="button"
+                  class="w-6 h-6 rounded-full border border-base-300 cursor-pointer ring-primary ring-offset-1"
+                  style="<%= style %>"
+                  title="<%= name %>"
+                  data-value="<%= value %>"
+                  data-room-editor-target="<%= target %>Button"
+                  data-action="room-editor#set<%= target.camelize %>"></button>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+
   <%# 編集キャンバス %>
   <div class="bg-base-100 rounded-box shadow-sm p-2">
     <svg viewBox="0 0 5000 4000" class="w-full h-auto touch-none select-none" data-room-editor-target="svg">
@@ -39,10 +61,12 @@
         <pattern id="grid" width="500" height="500" patternUnits="userSpaceOnUse">
           <path d="M 500 0 L 0 0 0 500" fill="none" stroke="#e5e7eb" stroke-width="10" />
         </pattern>
+        <%= render "texture_defs" %>
       </defs>
       <rect width="5000" height="4000" fill="#ffffff" />
       <rect width="5000" height="4000" fill="url(#grid)" />
       <g data-room-editor-target="roomLayer"></g>
+      <%= render "room_shading" %>
       <g data-room-editor-target="furnitureLayer"></g>
     </svg>
   </div>

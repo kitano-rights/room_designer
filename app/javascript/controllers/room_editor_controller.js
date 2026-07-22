@@ -14,10 +14,14 @@ const WALL_DIVISIONS = 3
 // - 家具: パレットから追加、ドラッグで移動、選択して回転・削除
 // - 保存: corners と家具一覧を JSON で PATCH 送信し、成功したら俯瞰画面へ遷移
 export default class extends Controller {
-  static targets = ["svg", "roomLayer", "furnitureLayer", "furnitureActions", "saveButton"]
+  static targets = ["svg", "roomLayer", "furnitureLayer", "furnitureActions", "saveButton", "wallColorButton", "floorColorButton"]
   static values = {
     corners: Array,
     depthLines: Array,
+    wallPolygons: Array,
+    floorPolygon: Array,
+    wallColor: String,
+    floorColor: String,
     furnitures: Array,
     kindSpecs: Object,
     updateUrl: String,
@@ -26,6 +30,8 @@ export default class extends Controller {
 
   connect() {
     this.furnitures = this.furnituresValue
+    this.wallColor = this.wallColorValue
+    this.floorColor = this.floorColorValue
     this.selectedIndex = null
 
     // 何もない場所のクリックで家具の選択を解除する
@@ -33,6 +39,7 @@ export default class extends Controller {
     this.svgTarget.addEventListener("pointerdown", () => this.deselect())
 
     this.renderRoom()
+    this.renderColorButtons()
     this.render()
   }
 
@@ -44,6 +51,18 @@ export default class extends Controller {
     this.furnitures.push({ kind: kind, pos_x: center.x, pos_y: center.y, rotation: 0 })
     this.selectedIndex = this.furnitures.length - 1
     this.render()
+  }
+
+  setWallColor(event) {
+    this.wallColor = event.currentTarget.dataset.value
+    this.renderRoom()
+    this.renderColorButtons()
+  }
+
+  setFloorColor(event) {
+    this.floorColor = event.currentTarget.dataset.value
+    this.renderRoom()
+    this.renderColorButtons()
   }
 
   rotateSelected() {
@@ -72,7 +91,14 @@ export default class extends Controller {
           "Accept": "application/json",
           "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content
         },
-        body: JSON.stringify({ room: { corners: this.cornersValue, furnitures: this.furnitures } })
+        body: JSON.stringify({
+          room: {
+            corners: this.cornersValue,
+            wall_color: this.wallColor,
+            floor_color: this.floorColor,
+            furnitures: this.furnitures
+          }
+        })
       })
       if (response.ok) {
         window.Turbo.visit(this.showUrlValue)
@@ -88,11 +114,21 @@ export default class extends Controller {
 
   // --- 描画 ---
 
-  // 部屋の形は固定なので接続時に一度だけ描画する
+  // 部屋の形は固定。壁紙・床の色が変わったときに再描画する
   // 区画線が境目・輪郭線の下に隠れるよう、塗り → 区画線 → 奥行き線 → 輪郭線 の順に重ねる
   renderRoom() {
     const points = this.cornersValue.map((point) => point.join(",")).join(" ")
-    const floor = this.svgElement("polygon", { points, fill: "#f8fafc" })
+    // 壁（左右）と床を選択した色・テクスチャで塗り分ける
+    const surfaces = [
+      ...this.wallPolygonsValue.map((polygon, index) => this.svgElement("polygon", {
+        points: polygon.map((point) => point.join(",")).join(" "),
+        fill: this.wallFill(index === 0 ? "left" : "right")
+      })),
+      this.svgElement("polygon", {
+        points: this.floorPolygonValue.map((point) => point.join(",")).join(" "),
+        fill: this.floorFill()
+      })
+    ]
     // 床・壁を等分する区画線
     const sectionLines = this.sectionLines().map(([from, to]) => this.svgElement("line", {
       x1: from.x, y1: from.y, x2: to.x, y2: to.y,
@@ -105,14 +141,35 @@ export default class extends Controller {
       stroke: "#d1d5db",
       "stroke-width": 20
     }))
+    // 輪郭線は陰影で立体感が出る分、細めに抑える
     const outline = this.svgElement("polygon", {
       points,
       fill: "none",
       stroke: "#334155",
-      "stroke-width": 40,
+      "stroke-width": 15,
       "stroke-linejoin": "round"
     })
-    this.roomLayerTarget.replaceChildren(floor, ...sectionLines, ...depthLines, outline)
+    this.roomLayerTarget.replaceChildren(...surfaces, ...sectionLines, ...depthLines, outline)
+  }
+
+  // 壁の塗り。値が「#」始まりなら色、それ以外は壁ごとに傾けたテクスチャパターン
+  wallFill(side) {
+    return this.wallColor.startsWith("#") ? this.wallColor : `url(#wall-${side}-${this.wallColor})`
+  }
+
+  // 床の塗り。値が「#」始まりなら色、それ以外は菱形に合わせたテクスチャパターン
+  floorFill() {
+    return this.floorColor.startsWith("#") ? this.floorColor : `url(#floor-${this.floorColor})`
+  }
+
+  // 選択中の色のボタンに枠を付ける
+  renderColorButtons() {
+    this.wallColorButtonTargets.forEach((button) => {
+      button.classList.toggle("ring-2", button.dataset.value === this.wallColor)
+    })
+    this.floorColorButtonTargets.forEach((button) => {
+      button.classList.toggle("ring-2", button.dataset.value === this.floorColor)
+    })
   }
 
   // 床 6×6・壁 6×3 の区画線（内側の線のみ。外周・境目は既存の線が担う）

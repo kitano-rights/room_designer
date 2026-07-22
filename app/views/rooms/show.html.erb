@@ -13,17 +13,29 @@
     <p class="text-center text-base-content/60 py-24">部屋の形がまだありません。エディターで作成してください。</p>
   <% else %>
     <svg viewBox="<%= room_view_box(@room.corners) %>" class="w-full max-h-[70vh]">
+      <defs>
+        <%= render "texture_defs" %>
+      </defs>
       <%# 奥行き線が輪郭線の下に隠れるよう、塗り → 奥行き線 → 輪郭線 の順に重ねる %>
-      <polygon points="<%= svg_polygon_points(@room.corners) %>" fill="#f8fafc" />
-      <%# 奥行きを表す内側の線（壁と壁・壁と床の境目）。固定形状の部屋にのみ描画する %>
       <% if @room.corners == Room::FIXED_CORNERS %>
+        <%# 壁（左右）と床を選択された色・テクスチャで塗り分ける %>
+        <% Room::FIXED_WALL_POLYGONS.each_with_index do |polygon, index| %>
+          <polygon points="<%= svg_polygon_points(polygon) %>"
+                   fill="<%= wall_fill(@room.wall_color, index.zero? ? "left" : "right") %>" />
+        <% end %>
+        <polygon points="<%= svg_polygon_points(Room::FIXED_FLOOR_POLYGON) %>" fill="<%= floor_fill(@room.floor_color) %>" />
+        <%# 奥行きを表す内側の線（壁と壁・壁と床の境目）%>
         <% Room::FIXED_DEPTH_LINES.each do |(x1, y1), (x2, y2)| %>
           <line x1="<%= x1 %>" y1="<%= y1 %>" x2="<%= x2 %>" y2="<%= y2 %>"
                 stroke="#d1d5db" stroke-width="20" />
         <% end %>
+        <%= render "room_shading" %>
+      <% else %>
+        <polygon points="<%= svg_polygon_points(@room.corners) %>" fill="#f8fafc" />
       <% end %>
+      <%# 輪郭線は陰影で立体感が出る分、細めに抑える %>
       <polygon points="<%= svg_polygon_points(@room.corners) %>"
-               fill="none" stroke="#334155" stroke-width="40" stroke-linejoin="round" />
+               fill="none" stroke="#334155" stroke-width="15" stroke-linejoin="round" />
       <% @room.furnitures.each do |furniture| %>
         <% spec = Furniture::KIND_SPECS[furniture.kind] %>
         <g class="furniture" transform="translate(<%= furniture.pos_x %> <%= furniture.pos_y %>) rotate(<%= furniture.rotation %>)">
