@@ -28,9 +28,19 @@ class RoomsController < ApplicationController
   end
 
   def update
+    @room = Room.find(params[:id])
+    if @room.update(room_params)
+      redirect_to rooms_path
+    else
+      # 一覧に留まり、エラーを保持した @room で該当行の編集モーダルを開き直す
+      @rooms = Room.all
+      render :index, status: :unprocessable_entity
+    end
   end
 
   def destroy
+    Room.find(params[:id]).destroy
+    redirect_to rooms_path, status: :see_other
   end
 
   private
